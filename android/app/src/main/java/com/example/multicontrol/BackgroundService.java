@@ -6,8 +6,12 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -23,6 +27,14 @@ public class BackgroundService extends Service {
     private static final int SERVER_PORT = 8080;              // Replace with your server port
     private Socket socket;
     private DataOutputStream outputStream;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable eventSender = new Runnable() {
+        @Override
+        public void run() {
+            sendEvent("MOUSE_MOVE", 100, 200);
+            handler.postDelayed(this, 50);  // Repeat every EVENT_INTERVAL
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -46,6 +58,9 @@ public class BackgroundService extends Service {
             outputStream = new DataOutputStream(socket.getOutputStream());
             Log.d("TCP Client", "Connected to server");
 
+            // start sending events once connected
+            handler.post(eventSender);
+
             Intent intent = new Intent("com.example.multicontrol.CONNECTION_ESTABLISHED");
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
@@ -57,16 +72,19 @@ public class BackgroundService extends Service {
     }
 
     public void sendEvent(String eventType, int x, int y) {
-        if (outputStream != null) {
-            try {
-                String message = eventType + ":" + x + "," + y;
-                outputStream.writeUTF(message);
-                outputStream.flush();
-                Log.d("TCP Client", "Event sent: " + message);
-            } catch (IOException e) {
-                e.printStackTrace();
+        new Thread(() -> {
+            if (outputStream != null) {
+                try {
+                    String message = eventType + ":" + x + "," + y;
+                    outputStream.writeUTF(message);
+                    outputStream.flush();
+//                    Log.d("TCP Client", "Event sent: " + message);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    stopSelf();  // Stop the service if an error occurs
+                }
             }
-        }
+        }).start();
     }
 
     @Override
@@ -79,6 +97,7 @@ public class BackgroundService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        handler.removeCallbacks(eventSender);  // Stop sending events
         try {
             if (outputStream != null) outputStream.close();
             if (socket != null) socket.close();

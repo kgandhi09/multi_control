@@ -7,12 +7,14 @@
 
 #define PORT 8080
 #define BACKLOG 5 // Number of pending connections queue will hold
+#define BUFFER_SIZE 1024
 
 int main() {
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
+    char buffer[BUFFER_SIZE] = {0};
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -55,7 +57,23 @@ int main() {
     }
     printf("Connection accepted\n");
 
-    // Here you can add code to handle data exchange with the client
+    // Continuously listen for incoming data
+    while (1) {
+        int bytes_received = recv(new_socket, buffer, BUFFER_SIZE, 0);
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0'; // Null-terminate the received data
+            printf("Received: %s\n", buffer);
+            
+            // Optionally, you could send a response back to the client
+            // send(new_socket, buffer, bytes_received, 0);
+        } else if (bytes_received == 0) {
+            printf("Client disconnected\n");
+            break;
+        } else {
+            perror("Receive failed");
+            break;
+        }
+    }
 
     // Closing the sockets
     close(new_socket);

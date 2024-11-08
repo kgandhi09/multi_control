@@ -17,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             Log.d("TCP Client", "Received flag to finish app");
             // Close MainActivity when the connection is established
-            finish();
+//            finish();
         }
     };
 
