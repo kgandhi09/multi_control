@@ -11,6 +11,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -44,6 +45,11 @@ public class BackgroundService extends Service {
             socket = new Socket(SERVER_IP, SERVER_PORT);
             outputStream = new DataOutputStream(socket.getOutputStream());
             Log.d("TCP Client", "Connected to server");
+
+            Intent intent = new Intent("com.example.multicontrol.CONNECTION_ESTABLISHED");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+
+            Log.d("TCP Client", "Sent broadcast to finish");
         } catch (IOException e) {
             e.printStackTrace();
             stopSelf();
